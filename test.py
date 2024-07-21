@@ -3,6 +3,10 @@ import os
 import numpy as np
 from diverse_grouped_ESN import evaluate_model
 import threading
+import warnings
+from tqdm import tqdm
+
+warnings.filterwarnings('ignore')
 
 def plot_rmse_vs_std(parameter, fixed_mean, std_range, num_points, in_channels=1, out_channels=500, num_decomposer=10, regularization=1e-6, dataset_name='Bike', validation=True, num_trials=20, delay=1,output=False):
     std_values = np.linspace(std_range[0], std_range[1], num_points)
@@ -46,8 +50,8 @@ def plot_rmse_vs_std(parameter, fixed_mean, std_range, num_points, in_channels=1
     plt.grid(True)
 
     # 保存用ディレクトリを作成
-    os.makedirs('fig', exist_ok=True)
-    plt.savefig(f'fig/rmse_vs_std_{parameter}_mean_{fixed_mean}_std_{std_range[0]}-{std_range[1]}_points_{num_points}.png')
+    os.makedirs(f'fig/{parameter}/{num_decomposer}/{dataset_name}', exist_ok=True)
+    plt.savefig(f'fig/{parameter}/{num_decomposer}/{dataset_name}/rmse_vs_std_mean_{fixed_mean}_std_{std_range[0]}-{std_range[1]}_points_{num_points}_dataset_{dataset_name}_regularization_{regularization}.png')
     plt.close()
 
 def plot_rmse_vs_std_thread(parameter, fixed_mean, std_range, num_points, in_channels=1, out_channels=500, num_decomposer=10, regularization=1e-6, dataset_name='Bike', validation=True, num_trials=20, delay=1,output=False):
@@ -61,48 +65,44 @@ def plot_rmse_vs_std_thread(parameter, fixed_mean, std_range, num_points, in_cha
 
 if __name__ == '__main__':
 
+    datasets = ["Cardio", "Sunspot", "Bike", "Traffic", "Melbourne", "Electricity", "MGS17", "Laser", "Nosiy_MGS17", "Noisy_Laser", "Sin_waves"]
+
+    regularizations = [1e-6, 1e-4, 1e-2]
+
+    num_decomposers = [5, 10]
 
 
-    plot_rmse_vs_std(
-        parameter='leaking_rate',
-        fixed_mean=0.5,
-        std_range=(0, 0.5),
-        num_points=50,
-        in_channels=1,
-        out_channels=500,
-        num_decomposer=10,
-        regularization=1e-6,
-        dataset_name='Sin_waves',
-        validation=True,
-        num_trials=20,
-        delay=1
-    )
+    for dataset in datasets:
+        print(f"Dataset: {dataset}")
+        for regularization in regularizations:
+            print(f"Regularization: {regularization}")
+            for num_decomposer in num_decomposers:
+                plot_rmse_vs_std(
+                    parameter='leaking_rate',
+                    fixed_mean=0.4,
+                    std_range=(0, 0.5),
+                    num_points=15,
+                    in_channels=1,
+                    out_channels=300,
+                    num_decomposer=num_decomposer,
+                    regularization=regularization,
+                    dataset_name=dataset,
+                    validation=True,
+                    num_trials=20,
+                    delay=1
+                )
 
-    plot_rmse_vs_std(
-        parameter='in_scale',
-        fixed_mean=0.8,
-        std_range=(0, 0.2),
-        num_points=50,
-        in_channels=1,
-        out_channels=500,
-        regularization=1e-6,
-        dataset_name='Sin_waves',
-        validation=True,
-        num_trials=20,
-        delay=1
-    )
-
-    plot_rmse_vs_std(
-        parameter='res_density',
-        fixed_mean=0.1,
-        std_range=(0, 0.1),
-        num_points=50,
-        in_channels=1,
-        out_channels=500,
-        num_decomposer=10,
-        regularization=1e-6,
-        dataset_name='Sin_waves',
-        validation=True,
-        num_trials=20,
-        delay=1
-    )
+                plot_rmse_vs_std(
+                    parameter='res_density',
+                    fixed_mean=0.15,
+                    std_range=(0, 0.1),
+                    num_points=15,
+                    in_channels=1,
+                    out_channels=300,
+                    num_decomposer=num_decomposer,
+                    regularization=regularization,
+                    dataset_name=dataset,
+                    validation=True,
+                    num_trials=20,
+                    delay=1
+                )
