@@ -2,6 +2,7 @@ import numpy as np
 import pandas
 import h5py
 from sklearn.preprocessing import MinMaxScaler
+import matplotlib.pyplot as plt
 
 def input_target_spliter(data:np.ndarray,delay:int):
     input = data[:-delay]
@@ -61,6 +62,21 @@ class timeseries_loader():
         original_series = Noisy_laser[:5000]
         return original_series
 
+    @property
+    def __get_sin_waves_with_changing_period(self, N:int = 10000, T:int = 5000,first_freq:int = 50,second_freq:int = 10):
+        # 最初の5000ステップは周期が1のsin波
+        sin_waves = np.sin(2*np.pi*first_freq*np.arange(N)/T)
+        # 次の5000ステップは周期が10のsin波
+        sin_waves[T:] = np.sin(2*np.pi*second_freq*np.arange(N-T)/(N-T))
+        return sin_waves
+
+    def draw_sin_waves_with_changing_period(self, N:int = 10000, T:int = 1000,first_freq:int = 1,second_freq:int = 10):
+        sin_waves = self.__get_sin_waves_with_changing_period
+        plt.plot(sin_waves)
+        plt.show()
+
+
+
     def __init__(self,dataset_name:str = None,validation=True,delay:int=1):
         self.loading_data = None
         self.dataset_name = dataset_name
@@ -90,6 +106,9 @@ class timeseries_loader():
             self.loading_data = self.__get_laser_dataset
         elif dataset_name == 'Noisy_Laser':
             self.loading_data = self.__get_Noisy_laser_dataset
+        elif dataset_name == 'Sin_waves':
+            self.loading_data = self.__get_sin_waves_with_changing_period
+
         self._preprocessing()
         self._dataset_index_spliter()
         self._overall_target_maker()
@@ -204,4 +223,18 @@ class timeseries_loader():
                 self.washout_set_index = np.arange(0,100)
                 self.train_set_index = np.arange(100,2600)
                 self.test_set_index = np.arange(2600,3100)
+        elif self.dataset_name == 'Sin_waves':
+            if self.validation == True:
+                self.washout_set_index = np.arange(0,100)
+                self.train_set_index = np.arange(100,3000)
+                self.validation_set_index = np.arange(3000,3500)
+                self.test_set_index = np.arange(3500,10000-self.delay)
+            else:
+                self.washout_set_index = np.arange(0,100)
+                self.train_set_index = np.arange(100,3500)
+                self.test_set_index = np.arange(3500,10000-self.delay)
+
+if __name__ == '__main__':
+    loader = timeseries_loader(dataset_name='Sin_waves',validation=True,delay=1)
+    loader.draw_sin_waves_with_changing_period(N=10000,T=1000,first_freq=1,second_freq=10)
         

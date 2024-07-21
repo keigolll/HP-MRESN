@@ -3,23 +3,33 @@ import numpy as np
 import torch
 from torch.nn.modules import Module
 from sklearn.linear_model import Ridge
-from sklearn.metrics import mean_squared_error
+from sklearn.metrics import mean_squared_error, mean_squared_log_error
+from sklearn.utils import deprecated
 from dataset_loader import timeseries_loader, input_target_spliter
 from tqdm import tqdm
+import random
+import matplotlib.pyplot as plt
 
 # 引数パーサーの設定
 parser = argparse.ArgumentParser()
 parser.add_argument('--in_channels', type=int, default=1, help='Dimension of inputs')
-parser.add_argument('--out_channels', type=int, default=500, help='Dimension of embeddings')
+parser.add_argument('--out_channels', type=int, default=5000, help='Dimension of embeddings')
 parser.add_argument('--lr', type=float, default=0.4, help='Leaking rate, (0,1], default = 1.0')
 parser.add_argument('--in_scale', type=float, default=1, help='Input scaling, default = 1.0')
 parser.add_argument('--res_density', type=float, default=0.1, help='Density of each reservoir, (0,1]')
 parser.add_argument('--C', type=float, default=1e-6, help='Regularization factor of the ridge regression')
-parser.add_argument('--dataset', type=str, default='Bike', help='Datasets used in the paper')
+parser.add_argument('--dataset', type=str, default='Sin_waves', help='Datasets used in the paper')
 parser.add_argument('--validation', type=bool, default=True, help='Validation mode or not')
-parser.add_argument('--num_trials', type=int, default=20, help='Number of random trials')
+parser.add_argument('--num_trials', type=int, default=1, help='Number of random trials')
 parser.add_argument('--delay', type=int, default=1, help='K-step-ahead, you can choose the value of K.')
+# 予測画像を出力するか
+parser.add_argument('--output', type=bool, default=True, help='Output prediction images')
 args = parser.parse_args()
+
+
+# Root Mean Squared Error function
+def root_mean_squared_error(y_true, y_pred):
+    return np.sqrt(mean_squared_error(y_true, y_pred))
 
 
 # モジュール定義
@@ -95,6 +105,8 @@ class LeakyIntegratorESN(Module):
 
         for i in range(x.shape[0]):
             u = x[i, :].unsqueeze(0)
+            if u.dim() == 3:
+                u = u.squeeze(0)
             h = (1 - self.leaking_rate) * h + self.leaking_rate * torch.tanh(
                 torch.mm(u, self.Win) + torch.mm(h, self.W))
             states.append(h)
@@ -148,13 +160,20 @@ if __name__ == "__main__":
         test_states = test_states.squeeze().detach().numpy()
         y_test_pred = regressor.predict(test_states)
 
+        # 予測画像の出力
+        if args.output:
+            plt.plot(y_test_tensor, label='True')
+            plt.plot(y_test_pred, label='Predicted')
+            plt.legend()
+            plt.show()
+
+
+
         # 評価
         if args.validation:
-            val_rmse = mean_squared_error(y_val_tensor, y_val_pred, squared=False) / torch.std(
-                y_val_tensor.clone().detach())
+            val_rmse = root_mean_squared_error(y_val_tensor, y_val_pred) / torch.std(y_val_tensor.clone().detach())
             NRMSE_validation.append(val_rmse)
-        test_rmse = mean_squared_error(y_test_tensor, y_test_pred, squared=False) / torch.std(
-            y_test_tensor.clone().detach())
+        test_rmse = root_mean_squared_error(y_test_tensor, y_test_pred) / torch.std(y_test_tensor.clone().detach())
         NRMSE_test.append(test_rmse)
 
     if args.validation:
